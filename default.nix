@@ -11,6 +11,10 @@
       pkgs.bash
       pkgs.utillinux
       pkgs.coreutils
+      (pkgs.runCommand "DELETEME" {} ''
+        mkdir -p $out/etc
+        cp -v ${./profile} $out/etc/profile
+      '')
     ];
   };
 
@@ -18,48 +22,49 @@
     rootPaths = [env];
   };
 
-  prepare-store = pkgs.writeShellScriptBin "prepare-store" ''
-    set -eux
-    export NIX_REMOTE=local?root=$PWD
-    export USER=nobody
+  prepare = {
+    wsl = pkgs.writeShellScriptBin "prepare-wsl" ''
+      mkdir -p $out
+      mkdir -m 0755 bin
+      mkdir -m 1777 tmp
 
-    ${pkgs.nix}/bin/nix-store --load-db <${closureInfo}/registration
-  '';
+      # WSL doesn't like these files as symlinks
+      cp -av ${pkgs.pkgsStatic.bash}/bin/bash bin/sh
+      cp -av ${pkgs.pkgsStatic.utillinux}/bin/mount bin/mount
 
-  prepare-profile = pkgs.writeShellScriptBin "prepare-profile" ''
-    set -eux
-    export NIX_REMOTE=local?root=$PWD
-    export USER=nobody
+      ln -sv nix/var/nix/profiles/default/etc etc
+    '';
+    store = pkgs.writeShellScriptBin "prepare-store" ''
+      set -eux
+      export NIX_REMOTE=local?root=$PWD
+      export USER=nobody
 
-    mkdir -p nix/var/nix/{profiles,gcroots/profiles}
-    ${pkgs.nix}/bin/nix --extra-experimental-features "nix-command flakes" \
-      profile install --offline --profile nix/var/nix/profiles/system ${env}
+      ${pkgs.nix}/bin/nix-store --load-db <${closureInfo}/registration
+    '';
+    profile = pkgs.writeShellScriptBin "prepare-profile" ''
+      set -eux
+      export NIX_REMOTE=local?root=$PWD
+      export USER=nobody
 
-    # rm -rv nix/var/nix/profiles/per-user/*
-    # rm -rf nix-*
+      mkdir -p nix/var/nix/{profiles,gcroots/profiles}
+      ${pkgs.nix}/bin/nix --extra-experimental-features "nix-command flakes" \
+        profile install --offline --profile nix/var/nix/profiles/default ${env}
 
 
-    while read -r file; do
-      cp -av $file nix/store
-    done < ${closureInfo}/store-paths
+      while read -r file; do
+        cp -av $file nix/store
+      done < ${closureInfo}/store-paths
 
-    rm -v env-vars
-    rm -rv nix-*
-  '';
-
-  prepare-static = pkgs.writeShellScriptBin "prepare-static" ''
-    mkdir -p $out
-    mkdir -m 0755 bin etc
-    mkdir -m 1777 tmp
-
-    cp -av ${pkgs.pkgsStatic.bash}/bin/bash bin/sh
-    cp -av ${pkgs.pkgsStatic.utillinux}/bin/mount bin/mount
-  '';
+      rm -rv nix/var/nix/profiles/per-user/*
+      rm -rf nix-*
+      rm -v env-vars
+    '';
+  };
 
   tarball = pkgs.runCommand "tarball" {} ''
-    ${lib.getExe prepare-static}
-    ${lib.getExe prepare-store}
-    ${lib.getExe prepare-profile}
+    ${lib.getExe prepare.store}
+    ${lib.getExe prepare.profile}
+    ${lib.getExe prepare.wsl}
 
     mkdir -p $out
 
@@ -72,23 +77,6 @@
       --hard-dereference \
       -c * > $out/wsl.tar
   '';
-  # tarball = pkgs.callPackage "${nixpkgs}/nixos/lib/make-system-tarball.nix" {
-  #   contents = [];
-  #   fileName = "wsl";
-  #   storeContents = pkgs2storeContents [
-  #     env
-  #   ];
-  #   compressCommand = "gzip";
-  #   compressionExtension = ".gz";
-  #   extraInputs = [];
-  #   # extraArgs = "--transform s,^,./,";
-  #   extraCommands =
-  #     (pkgs.writeShellScript "extraCommands" ''
-  #       ${lib.getExe prepare-store}
-  #       ${lib.getExe prepare-alpine}
-  #     '')
-  #     .outPath;
-  # };
 in {
   inherit
     tarball
