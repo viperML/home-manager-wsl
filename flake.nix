@@ -31,6 +31,7 @@
           packages = [
             pkgs.gnutar
             pkgs.file
+            pkgs.apk-tools
           ];
         };
       };

@@ -1,8 +1,11 @@
 #!/bin/sh
 
 chown -R root:root *
-chown -R 1000:1000 nix
-chown -R 1000:1000 home/*
+chown -R 1000:100 nix
+chown -R 1000:100 home/*
+
+rm -rf tmp
+mkdir -m 1777 tmp
 
 tar \
     --sort=name \
