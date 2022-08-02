@@ -1,38 +1,28 @@
 {
   nixpkgs ? <nixpkgs>,
   pkgs ? import nixpkgs {},
+  toplevel ? throw "pass toplevel",
 }: let
   inherit (pkgs) lib;
 
-  env = pkgs.buildEnv {
-    name = "profile-env";
-    paths = [
-      pkgs.nix
-      pkgs.bash
-      pkgs.utillinux
-      pkgs.coreutils
-      (pkgs.runCommand "DELETEME" {} ''
-        mkdir -p $out/etc
-        cp -v ${./profile} $out/etc/profile
-      '')
-    ];
-  };
-
   closureInfo = pkgs.closureInfo {
-    rootPaths = [env];
+    rootPaths = [toplevel];
   };
 
   prepare = {
     wsl = pkgs.writeShellScriptBin "prepare-wsl" ''
       mkdir -p $out
-      mkdir -m 0755 bin
+      mkdir -m 0755 bin etc
       mkdir -m 1777 tmp
 
       # WSL doesn't like these files as symlinks
-      cp -av ${pkgs.pkgsStatic.bash}/bin/bash bin/sh
+      cp -av ${pkgs.pkgsStatic.bashInteractive}/bin/bash bin/sh
       cp -av ${pkgs.pkgsStatic.utillinux}/bin/mount bin/mount
 
-      ln -sv nix/var/nix/profiles/default/etc etc
+      tee bashrc <<EOF
+      export PATH="${lib.makeBinPath [pkgs.coreutils-full]}:/nix/var/nix/profiles/system/sw/bin:$PATH"
+      source ${pkgs.bash-completion}/etc/profile.d/bash_completion.sh
+      EOF
     '';
     store = pkgs.writeShellScriptBin "prepare-store" ''
       set -eux
@@ -47,17 +37,18 @@
       export USER=nobody
 
       mkdir -p nix/var/nix/{profiles,gcroots/profiles}
-      ${pkgs.nix}/bin/nix --extra-experimental-features "nix-command flakes" \
-        profile install --offline --profile nix/var/nix/profiles/default ${env}
 
+      ln -sv ${toplevel} nix/var/nix/profiles/system-1-link
+      ln -sv system-1-link nix/var/nix/profiles/system
 
       while read -r file; do
         cp -av $file nix/store
       done < ${closureInfo}/store-paths
-
-      rm -rv nix/var/nix/profiles/per-user/*
+    '';
+    cleanup = pkgs.writeShellScriptBin "prepare-cleanup" ''
+      rm -rvf nix/var/nix/profiles/per-user/*
       rm -rf nix-*
-      rm -v env-vars
+      rm -fv env-vars
     '';
   };
 
@@ -65,6 +56,7 @@
     ${lib.getExe prepare.store}
     ${lib.getExe prepare.profile}
     ${lib.getExe prepare.wsl}
+    ${lib.getExe prepare.cleanup}
 
     mkdir -p $out
 
@@ -80,7 +72,6 @@
 in {
   inherit
     tarball
-    env
     closureInfo
     ;
 }
