@@ -25,5 +25,10 @@
     password = "ayats";
     isNormalUser = true;
     createHome = true;
+    extraGroups = [
+      "wheel"
+    ];
   };
+
+  security.sudo.wheelNeedsPassword = false;
 }
