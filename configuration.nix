@@ -2,6 +2,7 @@
   config,
   pkgs,
   modulesPath,
+  lib,
   ...
 }: {
   imports = [
@@ -11,9 +12,18 @@
     defaultPackages = [];
     systemPackages = [
       pkgs.nixos-install-tools
-      pkgs.bwrap
+      pkgs.bubblewrap
     ];
+    etc = {
+    };
   };
   boot.isContainer = true;
   system.stateVersion = "22.11";
+  system.activationScripts.binsh = lib.mkForce "";
+
+  users.users.ayats = {
+    password = "ayats";
+    isNormalUser = true;
+    createHome = true;
+  };
 }

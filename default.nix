@@ -23,6 +23,8 @@
       export PATH="${lib.makeBinPath [pkgs.coreutils-full]}:/nix/var/nix/profiles/system/sw/bin:$PATH"
       source ${pkgs.bash-completion}/etc/profile.d/bash_completion.sh
       EOF
+
+      cp -av ${./wsl.conf} etc/wsl.conf
     '';
     store = pkgs.writeShellScriptBin "prepare-store" ''
       set -eux
