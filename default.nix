@@ -1,7 +1,5 @@
 {
-  nixpkgs ? <nixpkgs>,
-  pkgs ? import nixpkgs {},
-  toplevel ? throw "pass toplevel",
+  pkgs ? import <nixpkgs> {},
 }: let
   inherit (pkgs) lib;
 
