@@ -4,19 +4,31 @@
       url = "github:hercules-ci/flake-parts";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
   outputs = {
     self,
     nixpkgs,
     flake-parts,
+    home-manager,
   }:
     flake-parts.lib.mkFlake {inherit self;} {
       systems = [
         "x86_64-linux"
       ];
+      flake.homeConfigurations.sample = home-manager.lib.homeManagerConfiguration {
+        pkgs = nixpkgs.legacyPackages."x86_64-linux";
+        modules = [
+          ./home.nix
+        ];
+      };
       perSystem = {pkgs, ...}: {
         packages = import ./default.nix {
           inherit pkgs;
+          inherit (self.homeConfigurations.sample.config.home) path activationPackage;
         };
         devShells.default = pkgs.mkShell {
           packages = [

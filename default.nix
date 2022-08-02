@@ -1,27 +1,21 @@
-{pkgs ? import <nixpkgs> {}}: let
+{
+  pkgs ? import <nixpkgs> {},
+  path,
+  activationPackage,
+}: let
   inherit (pkgs) lib;
-
-  bootstrapEnv = pkgs.buildEnv {
-    name = "bootstrap-env";
-    paths = [
-      pkgs.nix
-      pkgs.coreutils-full
-    ];
-  };
 
   closureInfo = pkgs.closureInfo {
     rootPaths = [
-      bootstrapEnv
+      path
     ];
   };
 
   alpineVersion = "3.16.0";
-
   alpine-tarball = pkgs.fetchurl {
     url = "https://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86_64/alpine-minirootfs-${alpineVersion}-x86_64.tar.gz";
     hash = "sha256-ScsNBwKoveH3qhYg9T6XzqUUzlNUAQCBLBEZthKKQTQ=";
   };
-
   extraAlpinePackages = [
     (pkgs.fetchurl {
       url = "https://dl-cdn.alpinelinux.org/alpine/v3.16/community/x86_64/sudo-1.9.10-r0.apk";
@@ -73,13 +67,22 @@
         profile install \
         --profile nix/var/nix/profiles/per-user/ayats/profile \
         --offline \
-        ${bootstrapEnv}
+        ${path}
 
       ln -s /nix/var/nix/profiles/per-user/ayats/profile home/ayats/.nix-profile
 
       chmod +w etc/profile.d
-      ls -la etc/profile.d
       ln -s /nix/var/nix/profiles/per-user/ayats/profile/etc/profile.d/nix.sh etc/profile.d/nix.sh
+      ln -s /nix/var/nix/profiles/per-user/ayats/profile/etc/profile.d/hm-session-vars.sh etc/profile.d/hm-session-vars.sh
+
+      export VERBOSE=1
+      export HOME=$PWD/home/ayats
+      export USER=ayats
+      export PATH="${lib.makeBinPath [pkgs.nix]}:$PATH"
+
+      newGenFiles="$(readlink -e "${activationPackage}/home-files")"
+      find "$newGenFiles" \( -type f -or -type l \) \
+        -exec bash ${link} "$newGenFiles" {} +
     '';
     # cleanup = pkgs.writeShellScriptBin "prepare-cleanup" ''
     #   rm -rvf nix/var/nix/profiles/per-user/*
@@ -87,6 +90,24 @@
     #   rm -fv env-vars
     # '';
   };
+
+  # Based on https://github.com/nix-community/home-manager/blob/2f58d0a3de97f4c20efcc6ba00878acfd7b5665d/modules/files.nix#L171
+  link = pkgs.writeShellScript "link" ''
+    newGenFiles="$1"
+    shift
+    for sourcePath in "$@" ; do
+      relativePath="''${sourcePath#$newGenFiles/}"
+      targetPath="$HOME/$relativePath"
+      if [[ -e "$targetPath" && ! -L "$targetPath" ]] && cmp -s "$sourcePath" "$targetPath" ; then
+        # The target exists but is identical – don't do anything.
+        "Skipping '$targetPath' as it is identical to '$sourcePath'"
+      else
+        # Place that symlink, --force
+        mkdir -p -v "$(dirname "$targetPath")"
+        ln -nsf -v "$sourcePath" "$targetPath"
+      fi
+    done
+  '';
 
   tarball = pkgs.runCommand "tarball" {} ''
     ${lib.getExe prepare.alpine}
@@ -102,6 +123,5 @@ in {
     tarball
     closureInfo
     alpine-tarball
-    bootstrapEnv
     ;
 }
