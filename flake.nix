@@ -23,6 +23,7 @@
             pkgs.gnutar
             pkgs.file
             pkgs.apk-tools
+            pkgs.less
           ];
         };
       };

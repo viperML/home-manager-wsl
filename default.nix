@@ -1,6 +1,4 @@
-{
-  pkgs ? import <nixpkgs> {},
-}: let
+{pkgs ? import <nixpkgs> {}}: let
   inherit (pkgs) lib;
 
   bootstrapEnv = pkgs.buildEnv {
@@ -63,12 +61,25 @@
 
       mkdir -p nix/var/nix/{profiles,gcroots/profiles}
 
-      ln -sv ${bootstrapEnv} nix/var/nix/profiles/bootstrap-1-link
-      ln -sv bootstrap-1-link nix/var/nix/profiles/bootstrap
-
       while read -r file; do
         cp -av $file nix/store
       done < ${closureInfo}/store-paths
+
+
+      mkdir -p nix/var/nix/profiles/per-user/ayats
+
+      ${pkgs.nix}/bin/nix \
+        --extra-experimental-features 'nix-command flakes' \
+        profile install \
+        --profile nix/var/nix/profiles/per-user/ayats/profile \
+        --offline \
+        ${bootstrapEnv}
+
+      ln -s /nix/var/nix/profiles/per-user/ayats/profile home/ayats/.nix-profile
+
+      chmod +w etc/profile.d
+      ls -la etc/profile.d
+      ln -s /nix/var/nix/profiles/per-user/ayats/profile/etc/profile.d/nix.sh etc/profile.d/nix.sh
     '';
     # cleanup = pkgs.writeShellScriptBin "prepare-cleanup" ''
     #   rm -rvf nix/var/nix/profiles/per-user/*
@@ -91,5 +102,6 @@ in {
     tarball
     closureInfo
     alpine-tarball
+    bootstrapEnv
     ;
 }
