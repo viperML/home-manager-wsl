@@ -122,11 +122,10 @@ in {
 
           mkdir -p nix/var/nix/profiles/per-user/${config.home.username}
 
-          ${pkgs.nix}/bin/nix \
-            --extra-experimental-features 'nix-command flakes' \
-            profile install \
+          ${pkgs.nix}/bin/nix-env \
+            --install \
+            --prebuilt-only \
             --profile nix/var/nix/profiles/per-user/${config.home.username}/profile \
-            --offline \
             ${config.home.path}
 
           ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile .${config.home.homeDirectory}/.nix-profile

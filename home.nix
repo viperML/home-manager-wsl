@@ -10,6 +10,7 @@
     packages = [
       pkgs.nix
       pkgs.fish
+      pkgs.nano
     ];
   };
   programs.home-manager.enable = true;

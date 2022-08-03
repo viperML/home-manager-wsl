@@ -10,7 +10,9 @@
     self,
     nixpkgs,
     home-manager,
-  }: {
+  }: let
+    genSystems = nixpkgs.lib.genAttrs nixpkgs.lib.systems.flakeExposed;
+  in {
     homeModules.default = import ./module.nix;
     homeConfigurations.sample = home-manager.lib.homeManagerConfiguration {
       pkgs = nixpkgs.legacyPackages."x86_64-linux";
@@ -19,5 +21,6 @@
         self.homeModules.default
       ];
     };
+    formatter = genSystems (system: nixpkgs.legacyPackages.${system}.alejandra);
   };
 }
