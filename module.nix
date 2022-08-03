@@ -90,6 +90,11 @@ in {
           tar -xvf ${alpine-tarball}
           cp -av ${./etc}/* etc
 
+          tee etc/wsl.conf <<EOF
+          [user]
+          default=${config.home.username}
+          EOF
+
           ${lib.concatMapStringsSep "\n" (p: "${pkgs.apk-tools}/bin/apk add --root $PWD --allow-untrusted ${p}") extraAlpinePackages}
 
           ${runBwrap "/usr/sbin/adduser -h ${config.home.homeDirectory} -s /bin/sh -G users -D ${config.home.username}"}
