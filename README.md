@@ -15,20 +15,21 @@ The installation is as simple as possible. You will need a flake-based home-mana
 1. Import the module into your config
     ```nix
     {
-    inputs = {
+      inputs = {
+        # ...
         home-manager-wsl.url = "github:viperML/home-manager-wsl";
-    };
-    outputs = {
+      };
+      outputs = {
         # ...
         home-manager-wsl,
-    }: {
+      }: {
         homeConfigurations."USERNAME" = home-manager.lib.homeManagerConfiguration {
-        modules = [
+          modules = [
             # ...
             home-manager-wsl.homeModules.default
-        ];
+          ];
         };
-    };
+      };
     }
     ```
 
