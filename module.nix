@@ -68,6 +68,7 @@ in {
       description = "Extra packages to cover alpine's packages";
       default = with pkgs; [
         coreutils-full
+        utillinux
         less
         gnutar
         curl
