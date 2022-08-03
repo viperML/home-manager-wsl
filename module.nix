@@ -65,11 +65,12 @@ in {
     packages = mkOption {
       type = types.listOf types.package;
       description = "Extra packages to cover alpine's packages";
-      default = [
-        pkgs.coreutils-full
-        pkgs.less
-        pkgs.gnutar
-        pkgs.curl
+      default = with pkgs; [
+        coreutils-full
+        less
+        gnutar
+        curl
+        ncurses
       ];
     };
   };
