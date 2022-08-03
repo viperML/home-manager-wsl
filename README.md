@@ -1,12 +1,12 @@
 # ❄ home-manager-wsl
 
-Home-manager module, that lets you build a WSL distribution tarball, which contains:
+[Home-manager](https://github.com/nix-community/home-manager) module, that lets you build a [WSL](https://docs.microsoft.com/en-us/windows/wsl/about) distribution tarball, which contains:
 
 - Alpine Linux as a base image
 - Nix single-user installation
 - Your HM config pre-installed and ready to go 🚀
 
-Home-manager is a project that lets you build reproducible user environments using the Nix package manager.
+Home-manager is a project that lets you build reproducible user environments using the [Nix package manager](https://nixos.org/).
 
 ## ✏️ Installation
 
@@ -59,7 +59,7 @@ And follow the installation guide from step 3.
 
 ## ⚙️ Configuration
 
-TODO
+> TODO
 
 ## 📐 Design considerations
 
@@ -75,3 +75,7 @@ Moreover, using an FHS distro with a runtime dynamic linker, simplifies the inte
 By using Alpine instead of something like Ubuntu, we get a cleaner `PATH` environment, without pre-installed tools like `gcc`, `python` or `make`. This makes the development experience closer to what developing in NixOS is.
 
 Letting the user use any other distro is in the TODO list though.
+
+## 📄 Disclaimer
+
+This project is not directly affiliated with home-manager.
