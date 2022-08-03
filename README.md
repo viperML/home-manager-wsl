@@ -3,7 +3,10 @@
 Home-manager module, that lets you build a WSL distribution tarball, which contains:
 
 - Alpine Linux as a base image
+- Nix single-user installation
 - Your HM config pre-installed and ready to go 🚀
+
+Home-manager is a project that lets you build reproducible user environments using the Nix package manager.
 
 ## ✏️ Installation
 
@@ -13,7 +16,7 @@ The installation is as simple as possible. You will need a flake-based home-mana
 ```nix
 {
   inputs = {
-    home-manager-wsl.url = "github:viperML/home-manager-nix";
+    home-manager-wsl.url = "github:viperML/home-manager-wsl";
   };
   outputs = {
     # ...
