@@ -12,5 +12,5 @@ set +e
 wsl.exe --unregister $NAME || :
 set -e
 
-wsl.exe --import $NAME 'C:\WSL' 'C:\Users\ayats\Desktop\wsl.tar.gz'
+wsl.exe --import $NAME "C:\WSL\\$NAME" 'C:\Users\ayats\Desktop\wsl.tar.gz'
 wsl.exe -d nix
