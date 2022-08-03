@@ -1,4 +1,4 @@
-# home-manager-wsl
+# ❄ home-manager-wsl
 
 Home-manager module, that lets you build a WSL distribution tarball, which contains:
 
