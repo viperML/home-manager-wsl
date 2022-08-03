@@ -1,13 +1,12 @@
 {
-  pkgs ? import <nixpkgs> {},
-  path,
-  activationPackage,
+  pkgs,
+  config,
 }: let
   inherit (pkgs) lib;
 
   closureInfo = pkgs.closureInfo {
     rootPaths = [
-      path
+      config.home.path
     ];
   };
 
@@ -38,8 +37,8 @@
 
       ${lib.concatMapStringsSep "\n" (p: "${pkgs.apk-tools}/bin/apk add --root $PWD --allow-untrusted ${p}") extraAlpinePackages}
 
-      ${runBwrap "/usr/sbin/adduser -h /home/ayats -s /bin/sh -G users -D ayats"}
-      ${runBwrap "/usr/sbin/addgroup ayats wheel"}
+      ${runBwrap "/usr/sbin/adduser -h ${config.home.homeDirectory} -s /bin/sh -G users -D ${config.home.username}"}
+      ${runBwrap "/usr/sbin/addgroup ${config.home.username} wheel"}
     '';
     store = pkgs.writeShellScriptBin "prepare-store" ''
       set -eux
@@ -59,36 +58,35 @@
         cp -av $file nix/store
       done < ${closureInfo}/store-paths
 
-
-      mkdir -p nix/var/nix/profiles/per-user/ayats
+      mkdir -p nix/var/nix/profiles/per-user/${config.home.username}
 
       ${pkgs.nix}/bin/nix \
         --extra-experimental-features 'nix-command flakes' \
         profile install \
-        --profile nix/var/nix/profiles/per-user/ayats/profile \
+        --profile nix/var/nix/profiles/per-user/${config.home.username}/profile \
         --offline \
-        ${path}
+        ${config.home.path}
 
-      ln -s /nix/var/nix/profiles/per-user/ayats/profile home/ayats/.nix-profile
+      ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile .${config.home.homeDirectory}/.nix-profile
 
       chmod +w etc/profile.d
-      ln -s /nix/var/nix/profiles/per-user/ayats/profile/etc/profile.d/nix.sh etc/profile.d/nix.sh
-      ln -s /nix/var/nix/profiles/per-user/ayats/profile/etc/profile.d/hm-session-vars.sh etc/profile.d/hm-session-vars.sh
+      ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile/etc/profile.d/nix.sh etc/profile.d/nix.sh
+      ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile/etc/profile.d/hm-session-vars.sh etc/profile.d/hm-session-vars.sh
 
       export VERBOSE=1
-      export HOME=$PWD/home/ayats
-      export USER=ayats
+      export HOME=$PWD${config.home.homeDirectory}
+      export USER=${config.home.username}
       export PATH="${lib.makeBinPath [pkgs.nix]}:$PATH"
 
-      newGenFiles="$(readlink -e "${activationPackage}/home-files")"
+      newGenFiles="$(readlink -e "${config.home.activationPackage}/home-files")"
       find "$newGenFiles" \( -type f -or -type l \) \
         -exec bash ${link} "$newGenFiles" {} +
     '';
-    # cleanup = pkgs.writeShellScriptBin "prepare-cleanup" ''
-    #   rm -rvf nix/var/nix/profiles/per-user/*
-    #   rm -rf nix-*
-    #   rm -fv env-vars
-    # '';
+    cleanup = pkgs.writeShellScriptBin "prepare-cleanup" ''
+      rm -rvf nix/var/nix/profiles/per-user/nixbld
+      rm -rf nix-*
+      rm -fv env-vars
+    '';
   };
 
   # Based on https://github.com/nix-community/home-manager/blob/2f58d0a3de97f4c20efcc6ba00878acfd7b5665d/modules/files.nix#L171
@@ -113,6 +111,7 @@
     ${lib.getExe prepare.alpine}
     ${lib.getExe prepare.store}
     ${lib.getExe prepare.profile}
+    ${lib.getExe prepare.cleanup}
 
     mkdir -p $out
 

@@ -19,16 +19,20 @@
       systems = [
         "x86_64-linux"
       ];
-      flake.homeConfigurations.sample = home-manager.lib.homeManagerConfiguration {
-        pkgs = nixpkgs.legacyPackages."x86_64-linux";
-        modules = [
-          ./home.nix
-        ];
+      flake = {
+        homeConfigurations.sample = home-manager.lib.homeManagerConfiguration {
+          pkgs = nixpkgs.legacyPackages."x86_64-linux";
+          modules = [
+            ./home.nix
+            self.homeModules.default
+          ];
+        };
+        homeModules.default = import ./module.nix;
       };
       perSystem = {pkgs, ...}: {
         packages = import ./default.nix {
           inherit pkgs;
-          inherit (self.homeConfigurations.sample.config.home) path activationPackage;
+          inherit (self.homeConfigurations.sample) config;
         };
         devShells.default = pkgs.mkShell {
           packages = [

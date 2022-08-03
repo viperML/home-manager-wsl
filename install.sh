@@ -10,6 +10,7 @@ mkdir -m 1777 tmp
 tar \
     --sort=name \
     --mtime='@1' \
+    --gzip \
     --numeric-owner \
     --hard-dereference \
-    -c * > $out/wsl.tar
+    -c * > $out/wsl.tar.gz
