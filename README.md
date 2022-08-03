@@ -46,6 +46,17 @@ The installation is as simple as possible. You will need a flake-based home-mana
     Then, import it with `wsl --import <Distro> <InstallLocation> <PathToTarball>`
 
 
+## 💨 Quick start
+
+If you want to give it a spin without setting up a new flake, you can build the sample config of this repo.
+
+```console
+nix build github:viperML/home-manager-wsl#homeConfigurations.sample.config.home.wsl.tarball
+```
+
+And follow the installation guide from step 3.
+
+
 ## ⚙️ Configuration
 
 TODO
@@ -62,3 +73,5 @@ Moreover, using an FHS distro with a runtime dynamic linker, simplifies the inte
 ### Alpine Linux as a base
 
 By using Alpine instead of something like Ubuntu, we get a cleaner `PATH` environment, without pre-installed tools like `gcc`, `python` or `make`. This makes the development experience closer to what developing in NixOS is.
+
+Letting the user use any other distro is in the TODO list though.
