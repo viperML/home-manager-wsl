@@ -8,4 +8,7 @@
       pkgs.fish
     ];
   };
+  xdg.configFile."home-manager-wsl-test".text = ''
+    Working!
+  '';
 }

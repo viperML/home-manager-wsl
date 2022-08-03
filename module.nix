@@ -43,6 +43,7 @@ with lib; let
   closureInfo = pkgs.closureInfo {
     rootPaths = [
       config.home.path
+      config.home.activationPackage
     ];
   };
 in {
@@ -116,7 +117,7 @@ in {
           mkdir -p nix/var/nix/{profiles,gcroots/profiles}
 
           while read -r file; do
-            cp -av $file nix/store
+            cp -a $file nix/store
           done < ${closureInfo}/store-paths
 
           mkdir -p nix/var/nix/profiles/per-user/${config.home.username}
@@ -129,6 +130,9 @@ in {
             ${config.home.path}
 
           ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile .${config.home.homeDirectory}/.nix-profile
+
+          ln -s ${config.home.activationPackage} nix/var/nix/profiles/per-user/${config.home.username}/home-manager-1-link
+          ln -s home-manager-1-link nix/var/nix/profiles/per-user/${config.home.username}/home-manager
 
           chmod +w etc/profile.d
           ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile/etc/profile.d/nix.sh etc/profile.d/nix.sh
@@ -147,6 +151,7 @@ in {
           rm -rvf nix/var/nix/profiles/per-user/nixbld
           rm -rf nix-*
           rm -fv env-vars
+          rm -rf nix/var/nix/gcroots/auto/*
         '')
       ];
     };
