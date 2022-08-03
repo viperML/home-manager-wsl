@@ -7,6 +7,7 @@ chown -R 1000:100 home/*
 rm -rf tmp
 mkdir -m 1777 tmp
 
+echo "Creating tarball, don't panic if it looks stuck"
 tar \
     --sort=name \
     --mtime='@1' \
