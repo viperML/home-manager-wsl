@@ -13,36 +13,36 @@ Home-manager is a project that lets you build reproducible user environments usi
 The installation is as simple as possible. You will need a flake-based home-manager config.
 
 1. Import the module into your config
-```nix
-{
-  inputs = {
-    home-manager-wsl.url = "github:viperML/home-manager-wsl";
-  };
-  outputs = {
-    # ...
-    home-manager-wsl,
-  }: {
-    homeConfigurations."USERNAME" = home-manager.lib.homeManagerConfiguration {
-      modules = [
-        # ...
-        home-manager-wsl.homeModules.default
-      ];
+    ```nix
+    {
+    inputs = {
+        home-manager-wsl.url = "github:viperML/home-manager-wsl";
     };
-  };
-}
-```
+    outputs = {
+        # ...
+        home-manager-wsl,
+    }: {
+        homeConfigurations."USERNAME" = home-manager.lib.homeManagerConfiguration {
+        modules = [
+            # ...
+            home-manager-wsl.homeModules.default
+        ];
+        };
+    };
+    }
+    ```
 
 2. Build the tarball
 
-```console
-nix build /path/to/your/flake#homeConfigurations.USERNAME.config.home.wsl.tarball
-```
+    ```console
+    nix build /path/to/your/flake#homeConfigurations.USERNAME.config.home.wsl.tarball
+    ```
 
 3. Install
 
-Copy the resulting tarball under `./result/<name>.tar.gz` into your Windows Host with WSL2 enabled.
+    Copy the resulting tarball under `./result/<name>.tar.gz` into your Windows Host with WSL2 enabled.
 
-Then, import it with `wsl --import <Distro> <InstallLocation> <PathToTarball>`
+    Then, import it with `wsl --import <Distro> <InstallLocation> <PathToTarball>`
 
 
 ## ⚙️ Configuration
