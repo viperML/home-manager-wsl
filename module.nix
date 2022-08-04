@@ -1,4 +1,4 @@
-{
+args @ {
   config,
   lib,
   pkgs,
@@ -22,30 +22,29 @@ with lib; let
       fi
     done
   '';
-  alpineVersion = "3.16.0";
-  alpine-tarball = pkgs.fetchurl {
-    url = "https://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86_64/alpine-minirootfs-${alpineVersion}-x86_64.tar.gz";
-    hash = "sha256-ScsNBwKoveH3qhYg9T6XzqUUzlNUAQCBLBEZthKKQTQ=";
-  };
-  extraAlpinePackages = [
-    (pkgs.fetchurl {
-      url = "https://dl-cdn.alpinelinux.org/alpine/v3.16/community/x86_64/sudo-1.9.10-r0.apk";
-      hash = "sha256-FO7zBXOLX4IO5GWDkWW3PU9ZMFsV1SiO8FtcbEat15U=";
-    })
-  ];
-  runBwrap = command: ''
-    ${pkgs.bubblewrap}/bin/bwrap \
-      --bind $PWD / \
-      --uid 0 \
-      --gid 0 \
-      -- ${command}
-  '';
   closureInfo = pkgs.closureInfo {
     rootPaths = [
       config.home.path
       config.home.activationPackage
     ];
   };
+  fakeroot-install-script = pkgs.writeShellScript "fakeroot-install-script" ''
+    chown -R root:root *
+    chown -R 1000:100 nix
+    chown -R 1000:100 home/*
+
+    rm -rf tmp
+    mkdir -m 1777 tmp
+
+    echo "Creating tarball, don't panic if it looks stuck"
+    tar \
+        --sort=name \
+        --mtime='@1' \
+        --gzip \
+        --numeric-owner \
+        --hard-dereference \
+        -c * > $out/wsl.tar.gz
+  '';
 in {
   options.home.wsl = {
     tarball = mkOption {
@@ -75,42 +74,32 @@ in {
         ncurses
       ];
     };
+    baseDistro = mkOption {
+      type = types.str;
+      description = "Linux distribution to use as a base";
+      default = "alpine";
+    };
   };
 
   config = {
     home.packages = config.home.wsl.packages;
     home.wsl = {
-      tarball = pkgs.runCommand "tarball" {} ''
-        ${concatMapStringsSep "\n" (p: lib.getExe p) config.home.wsl.provisionScripts}
-        ${concatMapStringsSep "\n" (p: lib.getExe p) config.home.wsl.extraProvisionScripts}
-
-        mkdir -p $out
-
-        ${pkgs.fakeroot}/bin/fakeroot sh -c ${./install.sh}
-      '';
       provisionScripts = [
-        (pkgs.writeShellScriptBin "prepare-alpine" ''
-          tar -xvf ${alpine-tarball}
-          cp -av ${./etc}/* etc
-
+        (import ./distros/${config.home.wsl.baseDistro} args)
+        (pkgs.writeShellScript "prepare-wsl" ''
           tee etc/wsl.conf <<EOF
           [user]
           default=${config.home.username}
           EOF
-
-          ${lib.concatMapStringsSep "\n" (p: "${pkgs.apk-tools}/bin/apk add --root $PWD --allow-untrusted ${p}") extraAlpinePackages}
-
-          ${runBwrap "/usr/sbin/adduser -h ${config.home.homeDirectory} -s /bin/sh -G users -D ${config.home.username}"}
-          ${runBwrap "/usr/sbin/addgroup ${config.home.username} wheel"}
         '')
-        (pkgs.writeShellScriptBin "prepare-store" ''
+        (pkgs.writeShellScript "prepare-store" ''
           set -eux
           export NIX_REMOTE=local?root=$PWD
           export USER=nobody
 
           ${pkgs.nix}/bin/nix-store --load-db <${closureInfo}/registration
         '')
-        (pkgs.writeShellScriptBin "prepare-profile" ''
+        (pkgs.writeShellScript "prepare-profile" ''
           set -eux
           export NIX_REMOTE=local?root=$PWD
           export USER=nobody
@@ -147,13 +136,20 @@ in {
           find "$newGenFiles" \( -type f -or -type l \) \
             -exec bash ${link} "$newGenFiles" {} +
         '')
-        (pkgs.writeShellScriptBin "prepare-cleanup" ''
+        (pkgs.writeShellScript "prepare-cleanup" ''
           rm -rvf nix/var/nix/profiles/per-user/nixbld
           rm -rf nix-*
           rm -fv env-vars
           rm -rf nix/var/nix/gcroots/auto/*
         '')
       ];
+      tarball = pkgs.runCommand "tarball" {} ''
+        ${concatStringsSep "\n" config.home.wsl.provisionScripts}
+        ${concatStringsSep "\n" config.home.wsl.extraProvisionScripts}
+
+        mkdir -p $out
+        ${pkgs.fakeroot}/bin/fakeroot sh -c ${fakeroot-install-script}
+      '';
     };
   };
 }
