@@ -6,7 +6,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
-  outputs = {
+  outputs = inputs @ {
     self,
     nixpkgs,
     home-manager,
@@ -17,7 +17,7 @@
     homeConfigurations.sample = home-manager.lib.homeManagerConfiguration {
       pkgs = nixpkgs.legacyPackages."x86_64-linux";
       modules = [
-        ./home.nix
+        (import ./home.nix inputs)
         self.homeModules.default
       ];
     };

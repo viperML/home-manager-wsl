@@ -1,9 +1,12 @@
-{
+inputs: {
   pkgs,
   config,
   ...
 }: {
   home = {
+    wsl = {
+      baseDistro = "void";
+    };
     username = "sample";
     homeDirectory = "/home/${config.home.username}";
     stateVersion = "22.05";
@@ -12,6 +15,9 @@
       pkgs.fish
       pkgs.nano
     ];
+    sessionVariables = {
+      NIX_PATH = "nixpkgs=${config.xdg.configHome}/nix/nixpkgs";
+    };
   };
   programs.home-manager.enable = true;
   xdg.configFile = {
@@ -19,6 +25,7 @@
       Working!
     '';
     "home-manager-wsl/flake".source = ./.;
+    "nix/nixpkgs".source = inputs.nixpkgs;
   };
   nix = {
     package = pkgs.nix;
