@@ -23,12 +23,16 @@
     };
     formatter = genSystems (system: nixpkgs.legacyPackages.${system}.alejandra);
     devShells = genSystems (system: {
-      default = with nixpkgs.legacyPackages.${system}; mkShellNoCC {
-        packages = [
-          nvfetcher
-          yq
-        ];
-      };
+      default = with nixpkgs.legacyPackages.${system};
+        mkShellNoCC {
+          packages = [
+            nvfetcher
+            yq
+            shellcheck
+            shfmt
+            self.formatter.${system}
+          ];
+        };
     });
   };
 }

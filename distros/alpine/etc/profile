@@ -1,11 +1,15 @@
+#!/bin/sh
 export CHARSET=UTF-8
 export LANG=C.UTF-8
-export PAGER=less
-export PS1='\h:\w\$ '
+# export PAGER=less
 umask 022
 
-for script in /etc/profile.d/*.sh ; do
-    if [ -r $script ] ; then
-        . $script
-    fi
-done
+if [ -d /etc/profile.d ]; then
+	for i in /etc/profile.d/*.sh; do
+		if [ -r "$i" ]; then
+			# shellcheck source=/dev/null
+			. "$i"
+		fi
+	done
+	unset i
+fi

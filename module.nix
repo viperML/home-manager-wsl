@@ -72,6 +72,7 @@ in {
         gnutar
         curl
         ncurses
+        execline
       ];
     };
     baseDistro = mkOption {
