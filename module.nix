@@ -71,16 +71,34 @@ in {
     packages = mkOption {
       type = with types; listOf package;
       description = "Extra packages to cover alpine's packages";
-      # Might want to add more things from here:
+      # Based on:
       # https://github.com/NixOS/nixpkgs/blob/nixos-unstable/nixos/modules/config/system-path.nix#L10
       default = with pkgs; [
+        bashInteractive
+        bzip2
         coreutils-full
-        utillinux
-        less
-        gnutar
+        cpio
         curl
+        diffutils
+        findutils
+        gawk
+        getconf
+        getent
+        gnugrep
+        gnupatch
+        gnused
+        gnutar
+        gzip
+        less
+        libcap
         ncurses
-        execline
+        netcat
+        procps
+        time
+        utillinux
+        which
+        xz
+        zstd
       ];
     };
     baseDistro = mkOption {
