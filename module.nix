@@ -43,7 +43,7 @@ with lib; let
         --gzip \
         --numeric-owner \
         --hard-dereference \
-        -c * > $out/wsl.tar.gz
+        -c * > $out/${config.home.wsl.tarballName}
   '';
 in {
   options.home.wsl = {
@@ -51,6 +51,12 @@ in {
       internal = true;
       type = types.package;
       description = "Package containing the WSL tarball";
+      readOnly = true;
+      visible = true;
+    };
+    tarballName = mkOption {
+      type = types.str;
+      description = "Filename to give to the buildable tarball";
     };
     provisionScripts = mkOption {
       internal = true;
@@ -65,6 +71,8 @@ in {
     packages = mkOption {
       type = with types; listOf package;
       description = "Extra packages to cover alpine's packages";
+      # Might want to add more things from here:
+      # https://github.com/NixOS/nixpkgs/blob/nixos-unstable/nixos/modules/config/system-path.nix#L10
       default = with pkgs; [
         coreutils-full
         utillinux
@@ -83,18 +91,10 @@ in {
     conf = mkOption {
       type = with types; attrsOf (attrsOf (oneOf [string int bool]));
       description = "Configuration to write to /etc/wsl.conf";
-      default = {
-        user.default = config.home.username;
-      };
     };
     package-wsl-conf = mkOption {
       type = types.package;
       internal = true;
-      default = pkgs.runCommand "wsl-conf" {} ''
-        mkdir -p $out/etc
-        tee $out/etc/wsl.conf <<EOF
-        ${generators.toINI {} config.home.wsl.conf}EOF
-      '';
     };
   };
 
@@ -105,6 +105,14 @@ in {
         config.home.wsl.package-wsl-conf
       ];
     home.wsl = {
+      conf = {
+        user.default = config.home.username;
+      };
+      package-wsl-conf = pkgs.runCommand "wsl-conf" {} ''
+        mkdir -p $out/etc
+        tee $out/etc/wsl.conf <<EOF
+        ${generators.toINI {} config.home.wsl.conf}EOF
+      '';
       provisionScripts = [
         (import ./distros/${config.home.wsl.baseDistro} args)
         (pkgs.writeShellScript "prepare-wsl" ''
@@ -168,6 +176,7 @@ in {
         mkdir -p $out
         ${pkgs.fakeroot}/bin/fakeroot sh -c ${fakeroot-install-script}
       '';
+      tarballName = mkDefault "wsl-${config.home.username}-${config.home.wsl.baseDistro}.tar.gz";
     };
   };
 }

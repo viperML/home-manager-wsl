@@ -5,7 +5,7 @@ inputs: {
 }: {
   home = {
     wsl = {
-      baseDistro = "void";
+      baseDistro = "alpine";
     };
     username = "sample";
     homeDirectory = "/home/${config.home.username}";
@@ -14,6 +14,7 @@ inputs: {
       pkgs.nix
       pkgs.fish
       pkgs.nano
+      (pkgs.callPackage ./bin/analyze_path.nix {})
     ];
     sessionVariables = {
       NIX_PATH = "nixpkgs=${config.xdg.configHome}/nix/nixpkgs";

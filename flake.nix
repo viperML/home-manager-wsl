@@ -31,6 +31,7 @@
             shellcheck
             shfmt
             self.formatter.${system}
+            (python3.withPackages (p: [p.black]))
           ];
         };
     });
