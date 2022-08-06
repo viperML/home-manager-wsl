@@ -54,16 +54,16 @@ in {
     };
     provisionScripts = mkOption {
       internal = true;
-      type = types.listOf types.package;
+      type = with types; listOf package;
       description = "Scripts to run when creating the tarball";
     };
     extraProvisionScripts = mkOption {
-      type = types.listOf types.package;
+      type = with types; listOf package;
       description = "Scripts to run when creating the tarball";
       default = [];
     };
     packages = mkOption {
-      type = types.listOf types.package;
+      type = with types; listOf package;
       description = "Extra packages to cover alpine's packages";
       default = with pkgs; [
         coreutils-full
@@ -80,18 +80,35 @@ in {
       description = "Linux distribution to use as a base";
       default = "alpine";
     };
+    conf = mkOption {
+      type = with types; attrsOf (attrsOf (oneOf [string int bool]));
+      description = "Configuration to write to /etc/wsl.conf";
+      default = {
+        user.default = config.home.username;
+      };
+    };
+    package-wsl-conf = mkOption {
+      type = types.package;
+      internal = true;
+      default = pkgs.runCommand "wsl-conf" {} ''
+        mkdir -p $out/etc
+        tee $out/etc/wsl.conf <<EOF
+        ${generators.toINI {} config.home.wsl.conf}EOF
+      '';
+    };
   };
 
   config = {
-    home.packages = config.home.wsl.packages;
+    home.packages =
+      config.home.wsl.packages
+      ++ [
+        config.home.wsl.package-wsl-conf
+      ];
     home.wsl = {
       provisionScripts = [
         (import ./distros/${config.home.wsl.baseDistro} args)
         (pkgs.writeShellScript "prepare-wsl" ''
-          tee etc/wsl.conf <<EOF
-          [user]
-          default=${config.home.username}
-          EOF
+          ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile/etc/wsl.conf etc/wsl.conf
         '')
         (pkgs.writeShellScript "prepare-store" ''
           set -eux
