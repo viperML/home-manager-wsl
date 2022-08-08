@@ -29,12 +29,15 @@ with lib; let
     ];
   };
   fakeroot-install-script = pkgs.writeShellScript "fakeroot-install-script" ''
+    set -eux
+    trap "set +x" ERR
     chown -R 1000:100 nix
     chown -R 1000:100 home/*
 
     rm -rf tmp
     mkdir -m 1777 tmp
 
+    set +x
     echo "Creating tarball, don't panic if it looks stuck"
     tar \
         --sort=name \
@@ -42,6 +45,7 @@ with lib; let
         --gzip \
         --numeric-owner \
         --hard-dereference \
+        --ignore-failed-read \
         -c * > $out/${config.home.wsl.tarballName}
   '';
 in {
@@ -141,14 +145,12 @@ in {
           ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile/etc/wsl.conf etc/wsl.conf
         '')
         (pkgs.writeShellScript "prepare-store" ''
-          set -eux
           export NIX_REMOTE=local?root=$PWD
           export USER=nobody
 
           ${pkgs.nix}/bin/nix-store --load-db <${closureInfo}/registration
         '')
         (pkgs.writeShellScript "prepare-profile" ''
-          set -eux
           export NIX_REMOTE=local?root=$PWD
           export USER=nobody
 
@@ -195,11 +197,14 @@ in {
         '')
       ];
       tarball = pkgs.runCommand "tarball" {} ''
+        set -eux
+        trap "set +x" ERR
         ${concatStringsSep "\n" config.home.wsl.provisionScripts}
         ${concatStringsSep "\n" config.home.wsl.extraProvisionScripts}
 
         mkdir -p $out
         ${pkgs.fakeroot}/bin/fakeroot sh -c ${fakeroot-install-script}
+        set +x
       '';
       tarballName = mkDefault "wsl-${config.home.username}-${config.home.wsl.baseDistro}.tar.gz";
     };

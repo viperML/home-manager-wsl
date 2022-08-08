@@ -6,10 +6,8 @@
 }: let
   sources = pkgs.callPackage ./generated.nix {};
 in
-  pkgs.writeShellScript "prepare-alpine" ''
-    set -x
+  pkgs.writeShellScript "prepare-ubuntu" ''
     tar -xv -p -f ${sources.rootfs.src}
-    cp -av ${./etc}/* etc
 
     ${lib.concatMapStringsSep "\n" (c: ''
         ${pkgs.bubblewrap}/bin/bwrap \
@@ -19,8 +17,6 @@ in
           --setenv PATH /bin:/sbin:/usr/bin:/usr/sbin \
           -- ${c}
       '') [
-        "adduser -h ${config.home.homeDirectory} -s /bin/sh -G users -D ${config.home.username}"
-        "addgroup ${config.home.username} wheel"
+        "useradd -m -N -g 100 -d ${config.home.homeDirectory} ${config.home.username}"
       ]}
-    set +x
   ''

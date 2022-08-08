@@ -70,11 +70,12 @@ The project [NixOS-WSL](https://github.com/nix-community/NixOS-WSL) already prov
 Moreover, using an FHS distro with a runtime dynamic linker, simplifies the integration with the WSL ecosystem, where many tools will download dynamically-linked binaries (VSCode for example).
 
 
-### Alpine Linux as a base
+### Base distros
 
-By using Alpine instead of something like Ubuntu, we get a cleaner `PATH` environment, without pre-installed tools like `gcc`, `python` or `make`. This makes the development experience closer to what developing in NixOS is.
+You can choose between some Linux Distributions to use a base. The full list is just the contents of [./distros](./distros/), and the configuration option is `home.wsl.baseDistro = "<name>"`.
 
-Letting the user use any other distro is in the TODO list though.
+The default is Alpine Linux, as it provides a clean environment without much binaries in `PATH`, which makes the development experience similar to NixOS. Void should also provide a minimal base, but using `gnu libc` instead of `musl libc`.
+
 
 ## 📄 Disclaimer
 
