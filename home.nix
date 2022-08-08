@@ -4,9 +4,6 @@ inputs: {
   ...
 }: {
   home = {
-    wsl = {
-      baseDistro = "alpine";
-    };
     username = "sample";
     homeDirectory = "/home/${config.home.username}";
     stateVersion = "22.05";

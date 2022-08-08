@@ -11,16 +11,24 @@
     nixpkgs,
     home-manager,
   }: let
-    genSystems = nixpkgs.lib.genAttrs nixpkgs.lib.systems.flakeExposed;
+    inherit (nixpkgs) lib;
+    genSystems = lib.genAttrs lib.systems.flakeExposed;
+    hmConfig = baseDistro:
+      home-manager.lib.homeManagerConfiguration {
+        pkgs = nixpkgs.legacyPackages."x86_64-linux";
+        modules = [
+          (import ./home.nix inputs)
+          self.homeModules.default
+          {home.wsl.baseDistro = baseDistro;}
+        ];
+      };
   in {
     homeModules.default = import ./module.nix;
-    homeConfigurations.sample = home-manager.lib.homeManagerConfiguration {
-      pkgs = nixpkgs.legacyPackages."x86_64-linux";
-      modules = [
-        (import ./home.nix inputs)
-        self.homeModules.default
-      ];
-    };
+    homeConfigurations =
+      {
+        sample = self.homeConfigurations.sample-alpine;
+      }
+      // (lib.mapAttrs' (name: _: lib.nameValuePair "sample-${name}" (hmConfig name)) (builtins.readDir ./distros));
     formatter = genSystems (system: nixpkgs.legacyPackages.${system}.alejandra);
     devShells = genSystems (system: {
       default = with nixpkgs.legacyPackages.${system};
@@ -32,6 +40,7 @@
             shfmt
             self.formatter.${system}
             (python3.withPackages (p: [p.black]))
+            fakeroot
           ];
         };
     });

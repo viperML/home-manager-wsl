@@ -29,7 +29,6 @@ with lib; let
     ];
   };
   fakeroot-install-script = pkgs.writeShellScript "fakeroot-install-script" ''
-    chown -R root:root *
     chown -R 1000:100 nix
     chown -R 1000:100 home/*
 
@@ -155,9 +154,12 @@ in {
 
           mkdir -p nix/var/nix/{profiles,gcroots/profiles}
 
+          set +x
+          echo "Copying nix store"
           while read -r file; do
             cp -a $file nix/store
           done < ${closureInfo}/store-paths
+          set -x
 
           mkdir -p nix/var/nix/profiles/per-user/${config.home.username}
 

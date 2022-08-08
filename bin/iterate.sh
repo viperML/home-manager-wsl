@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 set -ex
 
+CONFIG="${1:-sample}"
+
 NAME=nix
 
 DIR="$(cd $(dirname $BASH_SOURCE)/..; pwd)"
 
-FILENAME=$(nix eval --raw $DIR#homeConfigurations.sample.config.home.wsl.tarballName)
-nix build "$DIR"#homeConfigurations.sample.config.home.wsl.tarball -L
+FILENAME=$(nix eval --raw $DIR#homeConfigurations.$CONFIG.config.home.wsl.tarballName)
+nix build "$DIR#homeConfigurations.$CONFIG.config.home.wsl.tarball" -L
 cp -fvL result/$FILENAME ~/Desktop/$FILENAME
 
 set +e
