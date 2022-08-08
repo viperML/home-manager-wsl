@@ -122,6 +122,11 @@ in {
       ++ [
         config.home.wsl.package-wsl-conf
       ];
+
+    xdg = {
+      enable = mkDefault true;
+    };
+
     home.wsl = {
       conf = {
         user.default = config.home.username;

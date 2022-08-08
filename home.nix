@@ -12,7 +12,6 @@ inputs: {
     stateVersion = "22.05";
     packages = [
       pkgs.nix
-      pkgs.fish
       pkgs.nano
       (pkgs.callPackage ./bin/analyze_path.nix {})
     ];
@@ -20,14 +19,14 @@ inputs: {
       NIX_PATH = "nixpkgs=${config.xdg.configHome}/nix/nixpkgs";
     };
   };
+
   programs.home-manager.enable = true;
+
   xdg.configFile = {
-    "home-manager-wsl/test".text = ''
-      Working!
-    '';
     "home-manager-wsl/flake".source = ./.;
     "nix/nixpkgs".source = inputs.nixpkgs;
   };
+
   nix = {
     package = pkgs.nix;
     settings = {
