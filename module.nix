@@ -4,62 +4,8 @@ args @ {
   pkgs,
   ...
 }:
-with lib; let
-  # Based on https://github.com/nix-community/home-manager/blob/2f58d0a3de97f4c20efcc6ba00878acfd7b5665d/modules/files.nix#L171
-  link = pkgs.writeShellScript "link" ''
-    newGenFiles="$1"
-    shift
-    for sourcePath in "$@" ; do
-      relativePath="''${sourcePath#$newGenFiles/}"
-      targetPath="$HOME/$relativePath"
-      if [[ -e "$targetPath" && ! -L "$targetPath" ]] && cmp -s "$sourcePath" "$targetPath" ; then
-        # The target exists but is identical – don't do anything.
-        "Skipping '$targetPath' as it is identical to '$sourcePath'"
-      else
-        # Place that symlink, --force
-        mkdir -p -v "$(dirname "$targetPath")"
-        ln -nsf -v "$sourcePath" "$targetPath"
-      fi
-    done
-  '';
-  closureInfo = pkgs.closureInfo {
-    rootPaths = [
-      config.home.path
-      config.home.activationPackage
-    ];
-  };
-  fakeroot-install-script = pkgs.writeShellScript "fakeroot-install-script" ''
-    trap "set +x" ERR
-    set -eux
-    chown -R 1000:100 nix
-    chown -R 1000:100 home/*
-
-    rm -rf tmp
-    mkdir -m 1777 tmp
-
-    set +x
-    echo "Creating tarball, don't panic if it looks stuck"
-    tar \
-        --sort=name \
-        --mtime='@1' \
-        --gzip \
-        --numeric-owner \
-        --hard-dereference \
-        --ignore-failed-read \
-        -c * > $out/${config.home.wsl.tarballName}
-  '';
-  xdg-runtime-dir = pkgs.runCommandLocal "xdg-runtime-dir" {} ''
-    install -Dm444 ${./bin/xdg-runtime-dir.sh} $out/etc/profile.d/xdg-runtime-dir.sh
-  '';
-  wsl-conf = pkgs.runCommandLocal "wsl-conf" {} ''
-    mkdir -p $out/etc
-    tee $out/etc/wsl.conf <<EOF
-    # This file was written by home-manager-wsl at build time
-    ${generators.toINI {} config.home.wsl.conf}
-    EOF
-  '';
-in {
-  options.home.wsl = {
+with lib; {
+  options.wsl = {
     tarball = mkOption {
       internal = true;
       type = types.package;
@@ -71,14 +17,9 @@ in {
       type = types.str;
       description = "Filename to give to the buildable tarball";
     };
-    provisionScripts = mkOption {
-      internal = true;
-      type = with types; listOf package;
-      description = "Scripts to run when creating the tarball";
-    };
-    extraProvisionScripts = mkOption {
-      type = with types; listOf package;
-      description = "Scripts to run when creating the tarball";
+    extraProvisionCommands = mkOption {
+      type = with types; listOf str;
+      description = "Extra commands to run to create the tarball";
       default = [];
     };
     packages = mkOption {
@@ -127,37 +68,95 @@ in {
 
   config = {
     home.packages =
-      config.home.wsl.packages
+      config.wsl.packages
       ++ [
-        wsl-conf
-        xdg-runtime-dir
+        (pkgs.runCommandLocal "wsl-conf" {} ''
+          mkdir -p $out/etc
+          tee $out/etc/wsl.conf <<EOF
+          # This file was written by home-manager-wsl at build time
+          ${generators.toINI {} config.wsl.conf}
+          EOF
+        '')
+        (pkgs.runCommandLocal "xdg-runtime-dir" {} ''
+          install -Dm444 ${./bin/xdg-runtime-dir.sh} $out/etc/profile.d/xdg-runtime-dir.sh
+        '')
       ];
 
     xdg = {
       enable = mkDefault true;
     };
 
-    home.wsl = {
+    wsl = {
       conf = {
         user.default = config.home.username;
+        automount.mountFsTab = true;
       };
-      provisionScripts = [
-        (import ./distros/${config.home.wsl.baseDistro} args)
-        (pkgs.writeShellScript "prepare-wsl" ''
+      tarball = let
+        fakerootInstallScript = pkgs.writeShellScript "fakeroot-install-script" ''
+          trap "set +x" ERR
+          set -eux
+
+          chown -R 1000:100 nix
+          chown -R 1000:100 home/*
+
+          rm -rf tmp
+          mkdir -m 1777 tmp
+
+          set +x
+          echo "Creating tarball, don't panic if it looks stuck"
+          tar \
+              --sort=name \
+              --mtime='@1' \
+              --gzip \
+              --numeric-owner \
+              --hard-dereference \
+              --ignore-failed-read \
+              -c * > $out/${config.wsl.tarballName}
+        '';
+        # Based on https://github.com/nix-community/home-manager/blob/2f58d0a3de97f4c20efcc6ba00878acfd7b5665d/modules/files.nix#L171
+        link = pkgs.writeShellScript "link" ''
+          newGenFiles="$1"
+          shift
+          for sourcePath in "$@" ; do
+            relativePath="''${sourcePath#$newGenFiles/}"
+            targetPath="$HOME/$relativePath"
+            if [[ -e "$targetPath" && ! -L "$targetPath" ]] && cmp -s "$sourcePath" "$targetPath" ; then
+              # The target exists but is identical – don't do anything.
+              "Skipping '$targetPath' as it is identical to '$sourcePath'"
+            else
+              # Place that symlink, --force
+              mkdir -p -v "$(dirname "$targetPath")"
+              ln -nsf -v "$sourcePath" "$targetPath"
+            fi
+          done
+        '';
+        closureInfo = pkgs.closureInfo {
+          rootPaths = [
+            config.home.path
+            config.home.activationPackage
+          ];
+        };
+      in
+        pkgs.runCommand "home-manager-wsl-tarball" {} ''
+          trap "set +x" ERR
+          set -eux
+
+          ${import ./distros/${config.wsl.baseDistro} args}
+
           ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile/etc/wsl.conf etc/wsl.conf
 
           tee etc/fstab <<EOF
           # This file was written by home-manager-wsl at build time
           tmpfs /tmp tmpfs mode=1777,nosuid,nodev,noatime 0 0
           EOF
-        '')
-        (pkgs.writeShellScript "prepare-store" ''
+
+
           export NIX_REMOTE=local?root=$PWD
           export USER=nobody
 
           ${pkgs.nix}/bin/nix-store --load-db <${closureInfo}/registration
-        '')
-        (pkgs.writeShellScript "prepare-profile" ''
+
+
           export NIX_REMOTE=local?root=$PWD
           export USER=nobody
 
@@ -200,25 +199,19 @@ in {
           newGenFiles="$(readlink -e "${config.home.activationPackage}/home-files")"
           find "$newGenFiles" \( -type f -or -type l \) \
             -exec bash ${link} "$newGenFiles" {} +
-        '')
-        (pkgs.writeShellScript "prepare-cleanup" ''
+
           rm -rvf nix/var/nix/profiles/per-user/nixbld
           rm -rf nix-*
           rm -fv env-vars
           rm -rf nix/var/nix/gcroots/auto/*
-        '')
-      ];
-      tarball = pkgs.runCommand "tarball" {} ''
-        trap "set +x" ERR
-        set -eux
-        ${concatStringsSep "\n" config.home.wsl.provisionScripts}
-        ${concatStringsSep "\n" config.home.wsl.extraProvisionScripts}
 
-        mkdir -p $out
-        ${pkgs.fakeroot}/bin/fakeroot sh -c ${fakeroot-install-script}
-        set +x
-      '';
-      tarballName = mkDefault "wsl-${config.home.username}-${config.home.wsl.baseDistro}.tar.gz";
+          ${concatStringsSep "\n" config.wsl.extraProvisionCommands}
+
+          mkdir -p $out
+          ${pkgs.fakeroot}/bin/fakeroot sh -c ${fakerootInstallScript}
+          set +x
+        '';
+      tarballName = mkDefault "wsl-${config.home.username}-${config.wsl.baseDistro}.tar.gz";
     };
   };
 }

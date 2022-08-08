@@ -19,7 +19,7 @@
         modules = [
           (import ./home.nix inputs)
           self.homeModules.default
-          {home.wsl.baseDistro = baseDistro;}
+          {wsl.baseDistro = baseDistro;}
         ];
       };
   in {
