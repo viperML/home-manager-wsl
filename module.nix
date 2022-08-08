@@ -29,8 +29,8 @@ with lib; let
     ];
   };
   fakeroot-install-script = pkgs.writeShellScript "fakeroot-install-script" ''
-    set -eux
     trap "set +x" ERR
+    set -eux
     chown -R 1000:100 nix
     chown -R 1000:100 home/*
 
@@ -47,6 +47,16 @@ with lib; let
         --hard-dereference \
         --ignore-failed-read \
         -c * > $out/${config.home.wsl.tarballName}
+  '';
+  xdg-runtime-dir = pkgs.runCommandLocal "xdg-runtime-dir" {} ''
+    install -Dm444 ${./bin/xdg-runtime-dir.sh} $out/etc/profile.d/xdg-runtime-dir.sh
+  '';
+  wsl-conf = pkgs.runCommandLocal "wsl-conf" {} ''
+    mkdir -p $out/etc
+    tee $out/etc/wsl.conf <<EOF
+    # This file was written by home-manager-wsl at build time
+    ${generators.toINI {} config.home.wsl.conf}
+    EOF
   '';
 in {
   options.home.wsl = {
@@ -113,17 +123,14 @@ in {
       type = with types; attrsOf (attrsOf (oneOf [string int bool]));
       description = "Configuration to write to /etc/wsl.conf";
     };
-    package-wsl-conf = mkOption {
-      type = types.package;
-      internal = true;
-    };
   };
 
   config = {
     home.packages =
       config.home.wsl.packages
       ++ [
-        config.home.wsl.package-wsl-conf
+        wsl-conf
+        xdg-runtime-dir
       ];
 
     xdg = {
@@ -134,15 +141,15 @@ in {
       conf = {
         user.default = config.home.username;
       };
-      package-wsl-conf = pkgs.runCommand "wsl-conf" {} ''
-        mkdir -p $out/etc
-        tee $out/etc/wsl.conf <<EOF
-        ${generators.toINI {} config.home.wsl.conf}EOF
-      '';
       provisionScripts = [
         (import ./distros/${config.home.wsl.baseDistro} args)
         (pkgs.writeShellScript "prepare-wsl" ''
           ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile/etc/wsl.conf etc/wsl.conf
+
+          tee etc/fstab <<EOF
+          # This file was written by home-manager-wsl at build time
+          tmpfs /tmp tmpfs mode=1777,nosuid,nodev,noatime 0 0
+          EOF
         '')
         (pkgs.writeShellScript "prepare-store" ''
           export NIX_REMOTE=local?root=$PWD
@@ -171,14 +178,19 @@ in {
             --profile nix/var/nix/profiles/per-user/${config.home.username}/profile \
             ${config.home.path}
 
+          # TODO let the user add files to link
+
           ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile .${config.home.homeDirectory}/.nix-profile
 
           ln -s ${config.home.activationPackage} nix/var/nix/profiles/per-user/${config.home.username}/home-manager-1-link
           ln -s home-manager-1-link nix/var/nix/profiles/per-user/${config.home.username}/home-manager
 
           chmod +w etc/profile.d
-          ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile/etc/profile.d/nix.sh etc/profile.d/nix.sh
-          ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile/etc/profile.d/hm-session-vars.sh etc/profile.d/hm-session-vars.sh
+          for file in nix.sh hm-session-vars.sh xdg-runtime-dir.sh; do
+            ln -s \
+              /nix/var/nix/profiles/per-user/${config.home.username}/profile/etc/profile.d/$file \
+              etc/profile.d/$file
+          done
 
           export VERBOSE=1
           export HOME=$PWD${config.home.homeDirectory}
@@ -197,8 +209,8 @@ in {
         '')
       ];
       tarball = pkgs.runCommand "tarball" {} ''
-        set -eux
         trap "set +x" ERR
+        set -eux
         ${concatStringsSep "\n" config.home.wsl.provisionScripts}
         ${concatStringsSep "\n" config.home.wsl.extraProvisionScripts}
 
