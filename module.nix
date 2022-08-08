@@ -24,7 +24,7 @@ with lib; {
     };
     packages = mkOption {
       type = with types; listOf package;
-      description = "Extra packages to cover alpine's packages";
+      description = "Extra packages to provide a base environment";
       # Based on:
       # https://github.com/NixOS/nixpkgs/blob/nixos-unstable/nixos/modules/config/system-path.nix#L10
       default = with pkgs; [
@@ -57,7 +57,7 @@ with lib; {
     };
     baseDistro = mkOption {
       type = types.str;
-      description = "Linux distribution to use as a base";
+      description = "Linux distribution to use as a base, name of the folder in <repo root>/distros";
       default = "alpine";
     };
     conf = mkOption {
@@ -136,8 +136,17 @@ with lib; {
             config.home.activationPackage
           ];
         };
+        linkFromProfile = [
+          "etc/profile.d/nix.sh"
+          "etc/profile.d/hm-session-vars.sh"
+          "etc/profile.d/xdg-runtime-dir.sh"
+        ];
       in
-        pkgs.runCommand "home-manager-wsl-tarball" {} ''
+        pkgs.runCommand "home-manager-wsl-tarball" {
+          nativeBuildInputs = [
+            pkgs.nix
+          ];
+        } ''
           trap "set +x" ERR
           set -eux
 
@@ -150,18 +159,11 @@ with lib; {
           tmpfs /tmp tmpfs mode=1777,nosuid,nodev,noatime 0 0
           EOF
 
-
+          # Populate nix store
           export NIX_REMOTE=local?root=$PWD
           export USER=nobody
-
-          ${pkgs.nix}/bin/nix-store --load-db <${closureInfo}/registration
-
-
-          export NIX_REMOTE=local?root=$PWD
-          export USER=nobody
-
+          nix-store --load-db <${closureInfo}/registration
           mkdir -p nix/var/nix/{profiles,gcroots/profiles}
-
           set +x
           echo "Copying nix store"
           while read -r file; do
@@ -169,33 +171,23 @@ with lib; {
           done < ${closureInfo}/store-paths
           set -x
 
+          # Install and symlink profile
           mkdir -p nix/var/nix/profiles/per-user/${config.home.username}
-
-          ${pkgs.nix}/bin/nix-env \
+          nix-env \
             --install \
             --prebuilt-only \
             --profile nix/var/nix/profiles/per-user/${config.home.username}/profile \
             ${config.home.path}
-
-          # TODO let the user add files to link
-
           ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile .${config.home.homeDirectory}/.nix-profile
-
           ln -s ${config.home.activationPackage} nix/var/nix/profiles/per-user/${config.home.username}/home-manager-1-link
           ln -s home-manager-1-link nix/var/nix/profiles/per-user/${config.home.username}/home-manager
 
-          chmod +w etc/profile.d
-          for file in nix.sh hm-session-vars.sh xdg-runtime-dir.sh; do
-            ln -s \
-              /nix/var/nix/profiles/per-user/${config.home.username}/profile/etc/profile.d/$file \
-              etc/profile.d/$file
-          done
+          ${lib.concatMapStringsSep "\n" (file: "ln -sf /nix/var/nix/profiles/per-user/${config.home.username}/profile/${file} ${file}") linkFromProfile}
 
+          # Run a home-manager activation
           export VERBOSE=1
           export HOME=$PWD${config.home.homeDirectory}
           export USER=${config.home.username}
-          export PATH="${lib.makeBinPath [pkgs.nix]}:$PATH"
-
           newGenFiles="$(readlink -e "${config.home.activationPackage}/home-files")"
           find "$newGenFiles" \( -type f -or -type l \) \
             -exec bash ${link} "$newGenFiles" {} +
