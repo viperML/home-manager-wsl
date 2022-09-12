@@ -3,10 +3,10 @@
 {
   rootfs = {
     pname = "rootfs";
-    version = "3.16.1";
+    version = "3.16.2";
     src = fetchurl {
-      url = "https://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86_64/alpine-minirootfs-3.16.1-x86_64.tar.gz";
-      sha256 = "sha256-5DQcRdD9IzZCs08aNGgGXiryAmsZhZOLKzgnd8I9TTE=";
+      url = "https://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86_64/alpine-minirootfs-3.16.2-x86_64.tar.gz";
+      sha256 = "sha256-vqYIya4BkAlvFnHfvvnWhocBaB44cO7K1ljd4DLFiFw=";
     };
   };
 }
