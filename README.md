@@ -51,7 +51,7 @@ The installation is as simple as possible. You will need a flake-based home-mana
 If you want to give it a spin without setting up a new flake, you can build the sample config of this repo.
 
 ```console
-nix build github:viperML/home-manager-wsl#homeConfigurations.sample.config.wsl.tarball
+nix build github:viperML/home-manager-wsl
 ```
 
 And follow the installation guide from step 3.

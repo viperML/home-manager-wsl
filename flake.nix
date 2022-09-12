@@ -24,12 +24,21 @@
       };
   in {
     homeModules.default = import ./module.nix;
+
     homeConfigurations =
       {
         sample = self.homeConfigurations.sample-alpine;
       }
       // (lib.mapAttrs' (name: _: lib.nameValuePair "sample-${name}" (hmConfig name)) (builtins.readDir ./distros));
+
+    packages = genSystems (system:
+      (builtins.mapAttrs (_: value: value.config.wsl.tarball) (builtins.removeAttrs self.homeConfigurations ["sample"]))
+      // {
+        default = self.homeConfigurations.sample.config.wsl.tarball;
+      });
+
     formatter = genSystems (system: nixpkgs.legacyPackages.${system}.alejandra);
+
     devShells = genSystems (system: {
       default = with nixpkgs.legacyPackages.${system};
         mkShellNoCC {
