@@ -17,11 +17,25 @@ with lib; {
       type = types.str;
       description = "Filename to give to the buildable tarball";
     };
+
+    baseTarball = mkOption {
+      type = types.package;
+      readOnly = true;
+      visible = true;
+    };
+
+    nixTarball = mkOption {
+      type = types.package;
+      readOnly = true;
+      visible = true;
+    };
+
     extraProvisionCommands = mkOption {
       type = with types; listOf str;
       description = "Extra commands to run to create the tarball";
       default = [];
     };
+
     packages = mkOption {
       type = with types; listOf package;
       description = "Extra packages to provide a base environment";
@@ -55,11 +69,13 @@ with lib; {
         zstd
       ];
     };
+
     baseDistro = mkOption {
       type = types.str;
       description = "Linux distribution to use as a base, name of the folder in <repo root>/distros";
       default = "alpine";
     };
+
     conf = mkOption {
       type = with types; attrsOf (attrsOf (oneOf [string int bool]));
       description = "Configuration to write to /etc/wsl.conf";
@@ -91,28 +107,23 @@ with lib; {
         user.default = config.home.username;
         automount.mountFsTab = true;
       };
-      tarball = let
-        fakerootInstallScript = pkgs.writeShellScript "fakeroot-install-script" ''
-          trap "set +x" ERR
-          set -eux
 
-          chown -R 1000:100 nix
-          chown -R 1000:100 home/*
+      tarballName = mkDefault "wsl-${config.home.username}-${config.wsl.baseDistro}.tar.gz";
 
-          rm -rf tmp
-          mkdir -m 1777 tmp
+      baseTarball = pkgs.callPackage ./distros/${config.wsl.baseDistro} {};
 
-          set +x
-          echo "Creating tarball, don't panic if it looks stuck"
-          tar \
-              --sort=name \
-              --mtime='@1' \
-              --gzip \
-              --numeric-owner \
-              --hard-dereference \
-              --ignore-failed-read \
-              -c * > $out/${config.wsl.tarballName}
-        '';
+      nixTarball = let
+        closureInfo = pkgs.closureInfo {
+          rootPaths = [
+            config.home.path
+            config.home.activationPackage
+          ];
+        };
+        linkFromProfile = [
+          "etc/profile.d/nix.sh"
+          "etc/profile.d/hm-session-vars.sh"
+          "etc/profile.d/xdg-runtime-dir.sh"
+        ];
         # Based on https://github.com/nix-community/home-manager/blob/2f58d0a3de97f4c20efcc6ba00878acfd7b5665d/modules/files.nix#L171
         link = pkgs.writeShellScript "link" ''
           newGenFiles="$1"
@@ -130,27 +141,38 @@ with lib; {
             fi
           done
         '';
-        closureInfo = pkgs.closureInfo {
-          rootPaths = [
-            config.home.path
-            config.home.activationPackage
-          ];
-        };
-        linkFromProfile = [
-          "etc/profile.d/nix.sh"
-          "etc/profile.d/hm-session-vars.sh"
-          "etc/profile.d/xdg-runtime-dir.sh"
-        ];
       in
         pkgs.runCommand "home-manager-wsl-tarball" {
           nativeBuildInputs = [
             pkgs.nix
           ];
+          fakerootScript = pkgs.writeShellScript "fakeroot-install-script" ''
+            trap "set +x" ERR
+            set -eux
+
+            chown -R 1000:100 nix
+            chown -R 1000:100 home/*
+
+            rm -rf tmp
+            mkdir -m 1777 tmp
+
+            set +x
+            echo "Creating tarball, don't panic if it looks stuck"
+
+            tar \
+                --sort=name \
+                --mtime='@1' \
+                --numeric-owner \
+                --hard-dereference \
+                --ignore-failed-read \
+                -c * > $out
+          '';
         } ''
           trap "set +x" ERR
           set -eux
 
-          ${import ./distros/${config.wsl.baseDistro} args}
+          mkdir -p etc/profile.d
+          mkdir -p $PWD${config.home.homeDirectory}
 
           ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile/etc/wsl.conf etc/wsl.conf
 
@@ -199,11 +221,17 @@ with lib; {
 
           ${concatStringsSep "\n" config.wsl.extraProvisionCommands}
 
-          mkdir -p $out
-          ${pkgs.fakeroot}/bin/fakeroot sh -c ${fakerootInstallScript}
+          ${pkgs.fakeroot}/bin/fakeroot sh -c $fakerootScript
           set +x
         '';
-      tarballName = mkDefault "wsl-${config.home.username}-${config.wsl.baseDistro}.tar.gz";
+
+      tarball = pkgs.runCommand "wsl-tarball" {} ''
+        mkdir -p $out
+        # tar --concatenate -f result.tar ${config.wsl.baseTarball} ${config.wsl.nixTarball}
+        cat ${config.wsl.baseTarball} ${config.wsl.nixTarball} > result.tar
+        echo "Compressing tarball, don't panic if it looks stuck"
+        gzip -c ./result.tar > $out/${config.wsl.tarballName}
+      '';
     };
   };
 }
