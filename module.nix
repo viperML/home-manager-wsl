@@ -206,6 +206,8 @@ with lib; {
           cp -v ${config.wsl.baseTarball} result.tar
           chmod +w result.tar
 
+          set +x
+          echo "Appending files to the base distro"
           tar \
                 --mtime='@1' \
                 --hard-dereference \
@@ -214,6 +216,7 @@ with lib; {
                 --owner=1000 \
                 --group=100 \
                 -rf result.tar ./nix .${config.home.homeDirectory}
+          set -x
 
           tar \
                 --mtime='@1' \
@@ -227,7 +230,11 @@ with lib; {
           mkdir -p $out
           ${
             if config.wsl.compressTarball
-            then "gzip -c result.tar > ${outFile}"
+            then ''
+              set +x
+              echo "Compressing tarball"
+              gzip -c result.tar > ${outFile}
+            ''
             else "cp -v result.tar ${outFile}"
           }
 

@@ -2,7 +2,7 @@
 
 [Home-manager](https://github.com/nix-community/home-manager) module, that lets you build a [WSL](https://docs.microsoft.com/en-us/windows/wsl/about) distribution tarball, which contains:
 
-- Alpine Linux as a base image
+- Alpine/Ubuntu/Void as a base image
 - Nix single-user installation
 - Your HM config pre-installed and ready to go 🚀
 
@@ -57,9 +57,6 @@ nix build github:viperML/home-manager-wsl
 And follow the installation guide from step 3.
 
 
-## ⚙️ Configuration
-
-> TODO
 
 ## 📐 Design considerations
 
