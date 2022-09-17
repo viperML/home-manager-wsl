@@ -24,12 +24,6 @@ with lib; {
       visible = true;
     };
 
-    nixTarball = mkOption {
-      type = types.package;
-      readOnly = true;
-      visible = true;
-    };
-
     extraProvisionCommands = mkOption {
       type = with types; listOf str;
       description = "Extra commands to run to create the tarball";
@@ -110,9 +104,9 @@ with lib; {
 
       tarballName = mkDefault "wsl-${config.home.username}-${config.wsl.baseDistro}.tar.gz";
 
-      baseTarball = pkgs.callPackage ./distros/${config.wsl.baseDistro} {};
+      baseTarball = pkgs.callPackage ./distros/${config.wsl.baseDistro} {inherit config;};
 
-      nixTarball = let
+      tarball = let
         closureInfo = pkgs.closureInfo {
           rootPaths = [
             config.home.path
@@ -151,21 +145,22 @@ with lib; {
             set -eux
 
             chown -R 1000:100 nix
-            chown -R 1000:100 home/*
-
-            rm -rf tmp
-            mkdir -m 1777 tmp
+            chown -R 1000:100 $PWD${config.home.homeDirectory}
 
             set +x
             echo "Creating tarball, don't panic if it looks stuck"
 
+            set +x
+            echo "Adding store into base tarball..."
             tar \
-                --sort=name \
                 --mtime='@1' \
-                --numeric-owner \
                 --hard-dereference \
-                --ignore-failed-read \
-                -c * > $out
+                --sort=name \
+                --numeric-owner \
+                -rf result.tar ./nix ./home
+
+            echo "Compressing"
+            gzip -c result.tar > $out/${config.wsl.tarballName}
           '';
         } ''
           trap "set +x" ERR
@@ -176,10 +171,10 @@ with lib; {
 
           ln -s /nix/var/nix/profiles/per-user/${config.home.username}/profile/etc/wsl.conf etc/wsl.conf
 
-          tee etc/fstab <<EOF
-          # This file was written by home-manager-wsl at build time
-          tmpfs /tmp tmpfs mode=1777,nosuid,nodev,noatime 0 0
-          EOF
+          # tee etc/fstab <<EOF
+          # # This file was written by home-manager-wsl at build time
+          # tmpfs /tmp tmpfs mode=1777,nosuid,nodev,noatime 0 0
+          # EOF
 
           # Populate nix store
           export NIX_REMOTE=local?root=$PWD
@@ -219,19 +214,34 @@ with lib; {
           rm -fv env-vars
           rm -rf nix/var/nix/gcroots/auto/*
 
+
           ${concatStringsSep "\n" config.wsl.extraProvisionCommands}
 
-          ${pkgs.fakeroot}/bin/fakeroot sh -c $fakerootScript
+
+          mkdir -p $out
+          cp -v ${config.wsl.baseTarball} $out/${config.wsl.tarballName}
+          chmod +w $out/${config.wsl.tarballName}
+
+          tar \
+                --mtime='@1' \
+                --hard-dereference \
+                --sort=name \
+                --numeric-owner \
+                --owner=1000 \
+                --group=100 \
+                -rf $out/${config.wsl.tarballName} ./nix .${config.home.homeDirectory}
+
+          tar \
+                --mtime='@1' \
+                --hard-dereference \
+                --sort=name \
+                --numeric-owner \
+                --owner=0 \
+                --group=0 \
+                -rf $out/${config.wsl.tarballName} ./etc
+
           set +x
         '';
-
-      tarball = pkgs.runCommand "wsl-tarball" {} ''
-        mkdir -p $out
-        # tar --concatenate -f result.tar ${config.wsl.baseTarball} ${config.wsl.nixTarball}
-        cat ${config.wsl.baseTarball} ${config.wsl.nixTarball} > result.tar
-        echo "Compressing tarball, don't panic if it looks stuck"
-        gzip -c ./result.tar > $out/${config.wsl.tarballName}
-      '';
     };
   };
 }
