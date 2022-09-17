@@ -17,7 +17,7 @@ with lib; {
     compressTarball = mkOption {
       type = types.bool;
       description = "Compress the result tarball";
-      default = false;
+      default = true;
     };
 
     baseTarball = mkOption {
@@ -227,7 +227,7 @@ with lib; {
           mkdir -p $out
           ${
             if config.wsl.compressTarball
-            then "gzip -9 -c result.tar > ${outFile}"
+            then "gzip -c result.tar > ${outFile}"
             else "cp -v result.tar ${outFile}"
           }
 

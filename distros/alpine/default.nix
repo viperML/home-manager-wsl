@@ -11,6 +11,7 @@ runCommand "alpine-rootfs" {
 } ''
   set -xe
   trap "set +x" ERR
+
   gzip -d $src -c > $out
 
   tar -xpf $out
