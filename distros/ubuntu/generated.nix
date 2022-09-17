@@ -3,10 +3,10 @@
 {
   rootfs = {
     pname = "rootfs";
-    version = "bionic-20220805";
+    version = "22.04-20220902";
     src = fetchurl {
-      url = "https://cloud-images.ubuntu.com/bionic/20220805/bionic-server-cloudimg-amd64-wsl.rootfs.tar.gz";
-      sha256 = "sha256-QOBUkDoUrvkozGdCbFTMbpt1wTh/NoAo+yMonWVoBQU=";
+      url = "https://cloud-images.ubuntu.com/releases/22.04/release-20220902/ubuntu-22.04-server-cloudimg-amd64-wsl.rootfs.tar.gz";
+      sha256 = "sha256-Kjhyf3/1c2NKI8Ry43cryMjY2wMkvARy5f5iFbJr/7Q=";
     };
   };
 }

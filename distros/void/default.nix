@@ -29,7 +29,7 @@ runCommand "void-rootfs" {
     '') [
       # useradd fails with bad permissions otherwise
       "chmod u+w -R /etc"
-      "useradd -m -N -g 100 -G wheel -d ${config.home.homeDirectory} ${config.home.username}"
+      "useradd -m -N -g 100 -d ${config.home.homeDirectory} ${config.home.username}"
     ]}
 
   tee etc/sudoers.d/${config.home.username} <<EOF

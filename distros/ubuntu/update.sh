@@ -7,19 +7,14 @@ DIR="$(
     pwd
 )"
 
-curl -o "$TEMP/released.txt" -Ls https://cloud-images.ubuntu.com/query/released.latest.txt
 
-RELEASE_NAME="$(tail $TEMP/released.txt -n1 | awk '{print $1}')"
-RELEASE_CODE="$(tail $TEMP/released.txt -n1 | awk '{print $4}')"
-
-# RELEASE="$(yq -r '.[] | select( .flavor | contains("alpine-minirootfs") ) | .version' $TEMP/latest-releases.yaml)"
-# IFS=$'\n' read -d "" -ra arr <<< "${RELEASE//./$'\n'}"
-# MAJOR_RELEASE="$(printf ${arr[0]}.${arr[1]})"
+RELEASE="22.04"
+BUILD="$(curl -Ls https://cloud-images.ubuntu.com/releases/$RELEASE | grep -oE 'href="release-[0-9]+/"' | grep -oE '[0-9]+' | tail -n1)"
 
 tee "$TEMP/nvfetcher.toml" <<EOF
 [rootfs]
-src.manual = "$RELEASE_NAME-$RELEASE_CODE"
-fetch.url = "https://cloud-images.ubuntu.com/$RELEASE_NAME/$RELEASE_CODE/$RELEASE_NAME-server-cloudimg-amd64-wsl.rootfs.tar.gz"
+src.manual = "$RELEASE-$BUILD"
+fetch.url = "https://cloud-images.ubuntu.com/releases/$RELEASE/release-$BUILD/ubuntu-$RELEASE-server-cloudimg-amd64-wsl.rootfs.tar.gz"
 EOF
 
 nvfetcher \
