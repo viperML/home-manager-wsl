@@ -35,9 +35,11 @@ with lib; {
     packages = mkOption {
       type = with types; listOf package;
       description = "Extra packages to provide a base environment";
-      # Based on:
-      # https://github.com/NixOS/nixpkgs/blob/nixos-unstable/nixos/modules/config/system-path.nix#L10
       default = with pkgs; [
+        wslu
+
+        # Based on:
+        # https://github.com/NixOS/nixpkgs/blob/nixos-unstable/nixos/modules/config/system-path.nix#L10
         bashInteractive
         bzip2
         coreutils-full
@@ -93,6 +95,8 @@ with lib; {
           install -Dm444 ${./bin/xdg-runtime-dir.sh} $out/etc/profile.d/xdg-runtime-dir.sh
         '')
       ];
+
+    home.sessionVariables.BROWSER = "wslview";
 
     xdg = {
       enable = mkDefault true;
