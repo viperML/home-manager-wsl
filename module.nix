@@ -61,7 +61,7 @@ with lib; {
         netcat
         procps
         time
-        utillinux
+        util-linux
         which
         xz
         zstd
