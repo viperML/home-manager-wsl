@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env -S nix shell nixpkgs#htmlq -c bash
 
 TEMP="$(mktemp -d)"
 DIR="$(cd $(dirname $BASH_SOURCE); pwd)"

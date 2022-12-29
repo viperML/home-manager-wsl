@@ -1,16 +1,17 @@
 {
     "rootfs": {
         "cargoLocks": null,
+        "date": null,
         "extract": null,
         "name": "rootfs",
         "passthru": null,
         "pinned": false,
         "src": {
             "name": null,
-            "sha256": "sha256-hoGwYOOeFzaC4XIaYIgoDCtureYo9eXj6OS3QWPRh/Y=",
+            "sha256": "sha256-/8IQMCzPFt+Z0hYJYR4v8vRqb77ezeciCkzIgCZM+Uk=",
             "type": "url",
-            "url": "https://repo-default.voidlinux.org/live/20210930/void-x86_64-ROOTFS-20210930.tar.xz"
+            "url": "https://repo-default.voidlinux.org/live/20221001/void-x86_64-ROOTFS-20221001.tar.xz"
         },
-        "version": "20210930"
+        "version": "20221001"
     }
 }
